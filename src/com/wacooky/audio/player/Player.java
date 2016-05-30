@@ -1,4 +1,4 @@
-package com.wacooky.audio.onebit;
+package com.wacooky.audio.player;
 
 import java.io.File;
 import java.io.FileNotFoundException;

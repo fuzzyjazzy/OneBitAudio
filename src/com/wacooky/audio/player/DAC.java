@@ -1,4 +1,4 @@
-package com.wacooky.audio.onebit;
+package com.wacooky.audio.player;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -39,7 +39,7 @@ import javafx.beans.value.ObservableValue;
  * 
  */
 public abstract class DAC {
-	static final public int CHANNEL_BUFFER_SIZE = 2048*2; //bytes
+	static public boolean DEBUG = false;
 	static public DAC createDAC(Mixer.Info mixerinfo, boolean canDoP, String f ) throws FileNotFoundException, DecodeException {
 		Decoder decoder = new Decoder();
 		DSDFormat<?> dsd;
@@ -61,22 +61,23 @@ public abstract class DAC {
 				// ignore
 			}	
 		}
-		System.out.println("init " + dsd.getClass());
+		if (DEBUG) System.out.println("init " + dsd.getClass());
 		dsd.init(new Utils.RandomDSDStream(new File(f)));
 
 		decoder.init(dsd); 
-		System.out.printf("Playing ... %s%n", dsd);
+		if (DEBUG) System.out.printf("Play using %s%n", dsd);
 		DAC dac= new DsdDAC(mixerinfo, decoder, dsd);
 		if ( dac.isActive() )
 			return dac;
 
 		if (canDoP) {
-			System.out.println("DoP mode");
+			if (DEBUG) System.out.println("DoP mode");
 			dac = new DopDAC(mixerinfo, decoder, dsd);
 			if ( dac.isActive() )
 				return dac;
 		}
 
+		if (DEBUG) System.out.println("PCM mode");
 		dac = new PcmDAC(mixerinfo, decoder );
 		if ( dac.isActive() )
 			return dac;
@@ -156,6 +157,7 @@ public abstract class DAC {
 	//-------------------------------------------------
 	//-- Instance variables
 	Decoder decoder;
+	int blockSize = 4096; //default
 	 //--decorder's input side
 	int inputSampleFrequency;
 	long inputSampleCountTotal;
@@ -383,9 +385,15 @@ class DsdDAC extends DAC {
 	
 	public DsdDAC(Mixer.Info mixerinfo, Decoder decoder, DSDFormat<?> dsd) {
 		super(mixerinfo);
+		this.dsd = dsd;
+
+		if (dsd instanceof DSFFormat || dsd instanceof WSDFormat)
+			blockSize = 4096; //-- see DFFFormat bloc
+		else if (dsd instanceof DFFFormat)
+			blockSize = 2048; //-- see DFFFormat block
+
 		setDecoder(decoder);
 		//this.decoder = decoder;
-		this.dsd = dsd;
 		this.dl = getDataLine();
 	}
 
@@ -409,9 +417,9 @@ class DsdDAC extends DAC {
 					dsd.getSampleRate(), 1, dsd.getNumChannels(), 4, dsd.getSampleRate()/32,
 					true), mixerinfo);
 		} catch (IllegalArgumentException e) {
-			System.out.printf("No DSD %s%n", e);
+			if (DEBUG) System.out.printf("No DSD %s%n", e);
 		} catch (LineUnavailableException e) {
-			System.out.printf("No DSD %s%n", e);
+			if (DEBUG) System.out.printf("No DSD %s%n", e);
 		}
 		return null;
 	}
@@ -419,7 +427,7 @@ class DsdDAC extends DAC {
 	@Override
 	public void start(boolean background) throws LineUnavailableException {
 		this.background = background;
-		samples = new byte[dsd.getNumChannels() * CHANNEL_BUFFER_SIZE];
+		samples = new byte[dsd.getNumChannels() * blockSize];
 		dl.open();
 		dl.start();
 	}
@@ -473,21 +481,23 @@ class DopDAC extends DsdDAC {
 		pcmf.channels = 2;
 		//AudioFormat af = new AudioFormat(pcmf.sampleRate, pcmf.bitsPerSample, pcmf.channels, true, pcmf.lsb);
 		AudioFormat af = new AudioFormat(pcmf.sampleRate, pcmf.bitsPerSample, pcmf.channels, true, !pcmf.lsb);
-		System.out.println(af);
+		if (DEBUG) System.out.println(af);
 		try {
 			//pcmf.bitsPerSample = 24;
 			//decoder.setPCMFormat(pcmf);
-			if (mixerinfo != null)
-				System.out.println(mixerinfo.getName());
-			else
-				System.out.println("Default Audio Output");
+			if (DEBUG) {
+				if (mixerinfo != null)
+					System.out.println("DoPDAC " + mixerinfo.getName());
+				else
+					System.out.println("DoPDAC Default Audio Output");
+			}
 			decoder.setOutputFormat(null);	
 			return AudioSystem.getSourceDataLine(af, mixerinfo);
 		} catch (LineUnavailableException e) {
 			System.out.println(pcmSampleRate/1000f + "KHz 24bit is not supported.");
 			e.printStackTrace();
 		} catch (DecodeException e) {
-			System.out.println("Decoder setOutputFormat Errir");
+			System.out.println("Decoder setOutputFormat Error");
 			e.printStackTrace();
 		}
 		return null;
@@ -502,13 +512,13 @@ class DopDAC extends DsdDAC {
 */
 		//-- TODO: cupport odd or multiple of 3 channles
 		super.start(background);
-		System.out.println("create DoP buffer " + dl.getBufferSize());
+		if (DEBUG) System.out.println("create DoP buffer " + dl.getBufferSize());
 		int nchs = dsd.getNumChannels();
 		
-		int nwords = CHANNEL_BUFFER_SIZE * nchs / 2;
+		int nwords = blockSize * nchs / 2;
 		dopBufferSize = 3 * nwords;
 		dopBuffer = new byte[dopBufferSize]; //- 24bit(3bytes)/sample
-		System.out.println("create DoP buffer " + dopBufferSize + " for" + samples.length);
+		if (DEBUG) System.out.println("create DoP buffer " + dopBufferSize + " for" + samples.length);
 
 		int nchs2 = nchs * 2;
 		for(int i = 0, j = 0; i < nwords; i++ ) {
@@ -538,10 +548,10 @@ class DopDAC extends DsdDAC {
 			for(int c = 0; c < nchs; c++ ) {
 				//-- c = 0: L c = 1: R
 				j++;
-				dopBuffer[j++] = Utils.reverse(samples[i+c]);			
-				dopBuffer[j++] = Utils.reverse(samples[i+c+nchs]);
-				//dopBuffer[j++] = samples[i+c];			
-				//dopBuffer[j++] = samples[i+c+nchs];
+				//dopBuffer[j++] = Utils.reverse(samples[i+c]);			
+				//dopBuffer[j++] = Utils.reverse(samples[i+c+nchs]);
+				dopBuffer[j++] = samples[i+c];			
+				dopBuffer[j++] = samples[i+c+nchs];
 
 /*
 				if (c==1) {
@@ -587,7 +597,7 @@ class PcmDAC extends DAC {
 		//System.out.printf("clip: %x %x  %x-%x%n",((1 << pcmf.bitsPerSample) - 1) >> 1, 1 << pcmf.bitsPerSample, Short.MAX_VALUE, Short.MIN_VALUE); 
 		pcmf.channels = 2;
 		AudioFormat af = new AudioFormat(pcmf.sampleRate, pcmf.bitsPerSample, pcmf.channels, true, pcmf.lsb);
-		System.out.println(af);
+		if (DEBUG) System.out.println(af);
 		try {
 			pcmf.bitsPerSample = 24;
 			decoder.setOutputFormat(pcmf);

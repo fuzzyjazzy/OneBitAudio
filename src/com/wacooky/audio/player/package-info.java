@@ -8,4 +8,4 @@
  * @author fujimori
  *
  */
-package com.wacooky.audio.onebit;
+package com.wacooky.audio.player;

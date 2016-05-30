@@ -1,6 +1,6 @@
-package com.wacooky.audio.onebit;
+package com.wacooky.audio.player;
 	
-import com.wacooky.audio.onebit.Version;
+import com.wacooky.audio.player.Version;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
@@ -8,7 +8,7 @@ import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.fxml.FXMLLoader;
 
-@Version("0.1")
+@Version("0.2")
 public class Audio1bitPlayApp extends Application {
 	public static void main(String[] args) {
 		launch(args);

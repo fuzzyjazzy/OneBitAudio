@@ -1,9 +1,10 @@
-package com.wacooky.audio.onebit;
+package com.wacooky.audio.player;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 
 import javax.sound.sampled.Mixer;
 
@@ -28,11 +29,17 @@ import javafx.stage.WindowEvent;
 /**
  * 
  * @author fujimori
- * @version 0.9 2016-05-05
+ * 
+ * @version 0.9b 2016-05-30
+ * 			0.9a 2016-05-24
  */
 public class Audio1bitPlay {
 	static public boolean DEBUG = false;
-
+	static private String PROPERTIES_FILE_NAME = ".audio1bitplay";
+	static private String PROPERTY_DOP = "DoP";
+	static private String PROPERTY_CONFIG_DEVICE = "Config Device/";
+	static public enum Action {PLAY, STOP, PATH};
+	
 	@FXML private Button play;
 	@FXML private Button stop;
 	@FXML private Button device;
@@ -40,7 +47,8 @@ public class Audio1bitPlay {
 	@FXML public Label duration;
 	@FXML public Slider locationSlider;	
 	@FXML private TextField path;
-	
+
+	private Properties properties;
 	private DAC dac;
 	private SimpleTask<Object> task;
 	private MixerSelector mixerSelector = new MixerSelector("out");
@@ -51,9 +59,22 @@ public class Audio1bitPlay {
 	private ChangeListener<Number> samplesPropertyListener;
 
 	public Audio1bitPlay() {
-		if (DEBUG) System.out.println("Scan Audio Devices..");
-		listDoP = new ArrayList<String>();
-		listDoP.add("iFi (by AMR) HD USB Audio Output");
+		Properties defaults = new Properties();
+		defaults.setProperty(PROPERTY_DOP, "iFi (by AMR) HD USB Audio Output");
+		PropertiesUtil.appendUnique(defaults,PROPERTY_CONFIG_DEVICE + "Mac OS X", "open", "/Applications/Utilities/Audio MIDI Setup.app");
+		properties = new Properties(defaults);
+		PropertiesUtil.propertiesInUserDir(properties, PROPERTIES_FILE_NAME, "load");
+
+		//PropertiesUtil.append(properties, "DoP", "xxxx");
+		//PropertiesUtil.propertiesInUserDir(properties, PROPERTIES_FILE_NAME, "save");
+		
+		String[] list = PropertiesUtil.getPropertyAsArray(properties, PROPERTY_DOP);		
+		listDoP = Arrays.asList(list);
+		if (DEBUG) {
+			System.out.println("Regit DoP capable devices.");
+			for (int i = 0; i < listDoP.size(); i++)
+				System.out.println(listDoP.get(i));
+		}
 	}
 
 	/**
@@ -91,9 +112,43 @@ public class Audio1bitPlay {
     			locationSlider.setValue(audioLocation.convertSampleToRatio(samples));
             }
         };
-
+		updateControlActivity(Action.STOP);
 	}
 
+	protected void updateControlActivity(Action state) {
+		if (state == Action.PLAY) {
+			play.setDisable(true);
+			stop.setDisable(false);
+			path.setDisable(true);
+			device.setDisable(true);
+			return;
+		}
+
+		if (state == Action.STOP) {
+			if (path.getText().isEmpty()) {
+				play.setDisable(true);
+				locationSlider.setDisable(true);
+			} else {
+				play.setDisable(false);
+				locationSlider.setDisable(false);
+			}
+			stop.setDisable(true);
+			path.setDisable(false);
+			device.setDisable(false);
+			return;
+		}
+		
+		if (state == Action.PATH) {
+			if (path.getText().isEmpty()) {
+				play.setDisable(true);
+				locationSlider.setDisable(true);
+			} else {
+				play.setDisable(false);
+				locationSlider.setDisable(false);
+			}
+		}
+	}
+	
 	protected void stop() {
 		if (task != null )
 			task.cancel();
@@ -105,7 +160,7 @@ public class Audio1bitPlay {
 	
 	@FXML
 	public void onPlayClicked(ActionEvent event) {
-		if (DEBUG) System.out.println("play");
+		updateControlActivity(Action.PLAY);
 		//-- extra samplesProperty lister is null and callback is null
 		task = dac.run(null, new TaskCallback() {
 			@Override
@@ -115,7 +170,7 @@ public class Audio1bitPlay {
 
 	@FXML
 	public void onStopClicked(ActionEvent event) {
-		if (DEBUG) System.out.println("stop");
+		updateControlActivity(Action.STOP);
 		if (task != null)
 			task.cancel();
 	}
@@ -123,8 +178,14 @@ public class Audio1bitPlay {
 	@FXML
 	public void onDeviceClicked(ActionEvent event) {
 		mixerinfo = mixerSelector.mixerFromUser(mixerinfo);
-		if (DEBUG) System.out.println(mixerinfo.getName());
-		configureDevice();
+		if (mixerinfo != null) {
+			if (DEBUG) System.out.println(mixerinfo.getName());
+			configureDevice();
+		}
+		
+		if (!path.getText().isEmpty()) {
+			prepareDAC(path.getText());
+		}
 	}
 
 	//-----------------------------------------
@@ -143,6 +204,7 @@ public class Audio1bitPlay {
 		if(board.hasFiles()) {
 			board.getFiles().stream().forEach((file) -> {
 				path.setText(file.getPath());
+				updateControlActivity(Action.PATH);
 				//System.out.println(file.getPath());
 			});
 			event.setDropCompleted(true);
@@ -157,10 +219,11 @@ public class Audio1bitPlay {
 	protected void configureDevice() {
 		String os = System.getProperty("os.name");
 		if (DEBUG) System.out.println( os );
-		if (os.startsWith("Mac OS X") ) {
+		String[] cmd = PropertiesUtil.getPropertyAsArray(properties, PROPERTY_CONFIG_DEVICE + os);
+		if (cmd != null && cmd.length != 0 ) {
 			Runtime rt = Runtime.getRuntime();
 			try {
-				rt.exec(new String[] { "open", "/Applications/Utilities/Audio MIDI Setup.app" });
+				rt.exec( cmd );
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -200,7 +263,7 @@ public class Audio1bitPlay {
 		duration.setText(
 			AudioLocation.sampleToTimeString(inputSampleCount, inputSampleFreq)
 		);
-		if (DEBUG) System.out.println(outputSampleFreq + " " + inputSampleFreq);
+		if (DEBUG) System.out.println("Output SF:" + outputSampleFreq + " Input SF:" + inputSampleFreq);
 		
 		((ObservableValue<? extends Number>) dac.samplesProperty()).addListener(samplesPropertyListener);
 		dac.seekToOutputSampleCount(0L);
