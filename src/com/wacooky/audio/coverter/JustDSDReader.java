@@ -1,4 +1,4 @@
-package com.wacooky.justdsdex;
+package com.wacooky.audio.coverter;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,8 +6,7 @@ import java.nio.ByteOrder;
 
 import org.justcodecs.dsd.Decoder.DecodeException;
 
-import com.wacooky.audio.coverter.ByteInterleavedOneBitAudio;
-import com.wacooky.audio.coverter.OneBitAudioReader;
+import com.wacooky.justdsdex.JustDSDStream;
 
 public class JustDSDReader extends OneBitAudioReader {
 	org.justcodecs.dsd.DSDFormat<?> dsdFormat;

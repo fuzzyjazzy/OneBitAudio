@@ -20,14 +20,15 @@ public interface InteractiveProcess {
 	public double getTimeTotal();
 	/**
 	 * Set position of processing.
-	 * @param start			in second
-	 * @param end			in second
-	 * @throws IOException
+	 * @param start			in second.
+	 * @param end			in second.
+	 * @throws IOException	if seekTime fails.
 	 */
 	public void seekTime(double start, double end) throws IOException;
 	/**
 	 * Get current processing time.
-	 * @return
+	 * 
+	 * @return double seconds of elapsed time of this process.
 	 */
 	public double getTimeNow();
 	
@@ -40,12 +41,12 @@ public interface InteractiveProcess {
 	 * it should be large enough for efficiency and small enough for human interaction.
 	 * 
 	 * @return int	amount of processed data in byte
-	 * @throws IOException
+	 * @throws IOException IO error in reading or writing of file in this process
 	 */
 	public int process() throws IOException;
 	/**
 	 * Do closing file kind of things.
-	 * @throws IOException
+	 * @throws IOException	error of reading or writing file.
 	 */
 	public void terminate() throws IOException;
 }

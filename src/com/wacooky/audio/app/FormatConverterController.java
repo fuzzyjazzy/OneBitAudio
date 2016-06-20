@@ -3,9 +3,12 @@ package com.wacooky.audio.app;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.ResourceBundle;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.DataFormatException;
 
 import com.wacooky.audio.coverter.FormatConverter;
@@ -29,12 +32,13 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
-@Version("0.1")
+@Version("0.2")
 public class FormatConverterController implements Initializable {
 	static public boolean DEBUG = true;
 
@@ -42,6 +46,7 @@ public class FormatConverterController implements Initializable {
 	@FXML private Label currentFileLabel;
 	@FXML private SimpleTimeRegionWidget simpleTimeRegion;
 
+	@FXML private ComboBox<String> outComboBox;
 	@FXML private Button convertOneButton;
 	@FXML private Button convertAllButton;
 	@FXML private Button stopButton;
@@ -58,7 +63,9 @@ public class FormatConverterController implements Initializable {
 
 	private SimpleTask<Object> conversionTask;
 	private boolean singleStep;
-
+	private String outputFileExtension;
+	private Pattern namePattern = Pattern.compile("(.*)((__)(\\d+))?\\.\\w+$");
+	
 	private SimpleTask<Object> auditionTask;
 
 	@Override
@@ -89,6 +96,9 @@ public class FormatConverterController implements Initializable {
 						}
 						if (time != null)
 							setDurationTime(time.doubleValue());
+						else
+							setDurationTime(0.);
+
 					}
 				});
 		});
@@ -100,6 +110,10 @@ public class FormatConverterController implements Initializable {
 		
 		singleStep = false;
 		
+		outComboBox.getItems().addAll(new String[]{"DSF","WSD"});
+		outComboBox.getSelectionModel().select(0);
+		updateOutputFileExtension();
+
 		//-- test
 		//setDurationTime(400.);
 		/*
@@ -153,10 +167,23 @@ public class FormatConverterController implements Initializable {
 	//-- Sync three controls
 	public void setDurationTime(double time) {
 		simpleTimeRegion.setDurationTime(time);
+		startTimePicker.setTime(0.);
 		startTimePicker.setMax(time);
 		endTimePicker.setMax(time);
+		endTimePicker.setTime(time);
 	}
 
+	protected void updateOutputFileExtension() {
+		String ext = outComboBox.getSelectionModel().getSelectedItem();
+		if (ext != null)
+			outputFileExtension = ext.toLowerCase();
+	}
+	
+	@FXML
+	public void onOutComboBoxClicked(ActionEvent event) {
+		updateOutputFileExtension();
+	}
+	
 	@FXML
 	public void onConvertOneClicked(ActionEvent event) {
 		singleStep = true;
@@ -193,10 +220,29 @@ public class FormatConverterController implements Initializable {
 		AudioFileInfo info = audioFileTableWidget.getCurrentFileInfo();
 		if (info == null)
 			return null;
-		if (DEBUG) System.out.println("dst ");
 		String name = info.getPath().getFileName().toString();
-		name = name.substring(0, name.length()-3) + "DSF";
-		return info.getPath().getParent().resolve(name);
+		Matcher m = namePattern.matcher(name);
+		if (!m.matches())
+			return null;
+		name = m.group(1);
+		
+		//for (int i = 0; i < m.groupCount(); i++)
+		//	System.out.println("[" + m.group(i) +"]");
+		
+		int idx = 1;
+		if (m.group(3) != null)
+			idx = Integer.parseInt(m.group(3));
+	
+		//name = name.substring(0, name.length()-4);
+		String ext = "." + outputFileExtension;
+		Path dir =  info.getPath().getParent();
+		String guess = name + ((m.group(2) != null) ? m.group(2) : ""); //-- prefix to index
+		String result;
+		while ( Files.exists(dir.resolve((result = guess + ext))) )
+			guess = name + "__" + String.valueOf(idx++);
+
+		if (DEBUG) System.out.println("dst " + result);
+		return dir.resolve(result);
 /*		
 		File file = new File("/Volumes/WDMyPassport/DSD/");
 		Path parent = file.toPath();
@@ -366,30 +412,6 @@ public class FormatConverterController implements Initializable {
 		th.start();    
 	}
 
-/*
-	protected Wsd2Dsd createConverter() {
-		AudioFileInfo fileInfo = audioFileTableWidget.getCurrentFileInfo();
-		if (fileInfo == null)
-			return null;
-		Path dstPath = currentDst();
-		try {
-			RandomAccessFile srcFile = new RandomAccessFile(fileInfo.getPath().toFile(), "r");
-			RandomAccessFile dstFile = new RandomAccessFile(dstPath.toFile(), "rw");
-			Wsd2Dsd wsd2dsd = new Wsd2Dsd();
-			try {
-				wsd2dsd.initializeFileIO(srcFile, dstFile);
-				return wsd2dsd;
-			} catch (DataFormatException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}		
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-*/
 	
 	protected InteractiveProcess createConverter() {
 		AudioFileInfo fileInfo = audioFileTableWidget.getCurrentFileInfo();
@@ -414,19 +436,3 @@ public class FormatConverterController implements Initializable {
 	//-------------------------------------------------------------------
 
 }
-
-
-/*
-for(Field field : this.getClass().getDeclaredFields()){			
-	if (field.getAnnotation(FXML.class) == null)
-		continue;
-	Class clazz = field.getType();
-	String name = field.getName();
-	System.out.println(name + ":" + clazz);
-
-	//Annotation[] annotations = field.getDeclaredAnnotations();
-	//for(Annotation anno: annotations)
-	//	System.out.println(anno);
-}
-*/
-

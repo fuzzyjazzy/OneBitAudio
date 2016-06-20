@@ -10,7 +10,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
-import javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 
@@ -36,7 +35,7 @@ public class TimePicker extends AnchorPane {
 	}
 
 	//--For DEBUG
-	public TimePicker(Spinner timePickerSpinner, Label hourLabel, Label minuteLabel, Label secondLabel) {
+	public TimePicker(Spinner<Double> timePickerSpinner, Label hourLabel, Label minuteLabel, Label secondLabel) {
 		this.timePickerSpinner = timePickerSpinner;
 		this.hourLabel = hourLabel;
 		this.minuteLabel = minuteLabel;

@@ -32,37 +32,74 @@ import javafx.beans.value.ObservableValue;
 /**
  * DAC
  *
- * File ->[Decoder]->[DAC] -> SourceDataLine
- *
+ * DAC is a convenient class for playing one-bit audio fine through audio interface.
+ * DAC crates a org.justcodecs.dsd.Decoder with appropriate  org.justcodecs.dsd.DSDFormat fro
+ * given file and opens audio interface and format one-bit data of Decoder output
+ * according to Mixer.Info and DoP capable flag.
+ * 
  * @author fujimori
- * @version 0.9 2016-05-05
+ * @version 0.92 2016-06-17 add close(), createDSDFormat()
+ * @version 0.91 2016-06-13 bug fix PcmDAC
+ * @version 0.90 2016-05-05
  * 
  */
 public abstract class DAC {
 	static public boolean DEBUG = false;
-	static public DAC createDAC(Mixer.Info mixerinfo, boolean canDoP, String f ) throws FileNotFoundException, DecodeException {
-		Decoder decoder = new Decoder();
+	static public DSDFormat<?> createDSDFormat(String path) {
 		DSDFormat<?> dsd;
-		if (f.toLowerCase().endsWith(".dsf")) {
+		if (path.toLowerCase().endsWith(".dsf")) {
 			dsd = new DSFFormat();
-		} else if (f.toLowerCase().endsWith(".iso")) {
+		} else if (path.toLowerCase().endsWith(".iso")) {
 			dsd = new DISOFormat();
-		} else if (f.toLowerCase().endsWith(".wsd")) {
+		} else if (path.toLowerCase().endsWith(".wsd")) {
 			dsd = new WSDFormat();			
-		} else if (f.toLowerCase().endsWith(".dff")) {
+		} else if (path.toLowerCase().endsWith(".dff")) {
 			dsd = new DFFFormat();
 		} else
 			return null;
 		
-		if (f.toUpperCase().startsWith("FILE:/")) {
+		if (path.toUpperCase().startsWith("FILE:/")) {
 			try {
-				f = new URL(URLDecoder.decode(f, "UTF-8")).getFile();
+				path = new URL(URLDecoder.decode(path, "UTF-8")).getFile();
 			} catch (Exception e) {
 				// ignore
 			}	
 		}
 		if (DEBUG) System.out.println("init " + dsd.getClass());
-		dsd.init(new Utils.RandomDSDStream(new File(f)));
+		try {
+			dsd.init(new Utils.RandomDSDStream(new File(path)));
+			return dsd;
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (DecodeException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	static public DAC createDAC(Mixer.Info mixerinfo, boolean canDoP, String path ) throws FileNotFoundException, DecodeException {
+		Decoder decoder = new Decoder();
+		DSDFormat<?> dsd;
+		if (path.toLowerCase().endsWith(".dsf")) {
+			dsd = new DSFFormat();
+		} else if (path.toLowerCase().endsWith(".iso")) {
+			dsd = new DISOFormat();
+		} else if (path.toLowerCase().endsWith(".wsd")) {
+			dsd = new WSDFormat();			
+		} else if (path.toLowerCase().endsWith(".dff")) {
+			dsd = new DFFFormat();
+		} else
+			return null;
+		
+		if (path.toUpperCase().startsWith("FILE:/")) {
+			try {
+				path = new URL(URLDecoder.decode(path, "UTF-8")).getFile();
+			} catch (Exception e) {
+				// ignore
+			}	
+		}
+		if (DEBUG) System.out.println("init " + dsd.getClass());
+		dsd.init(new Utils.RandomDSDStream(new File(path)));
 
 		decoder.init(dsd); 
 		if (DEBUG) System.out.printf("Play using %s%n", dsd);
@@ -78,7 +115,7 @@ public abstract class DAC {
 		}
 
 		if (DEBUG) System.out.println("PCM mode");
-		dac = new PcmDAC(mixerinfo, decoder );
+		dac = new PcmDAC(mixerinfo, decoder, dsd );
 		if ( dac.isActive() )
 			return dac;
 		return null;
@@ -114,7 +151,8 @@ public abstract class DAC {
 	 * @param fromSamples 	audition start sample count of input file.
 	 * @param samples		audition duration sample count of input file.
 	 * @param theListener	samplesProperty listener (output side)
-	 * @return				SimpleTask<Object> 
+	 * @param callback		TaskCallback 
+	 * @return				SimpleTask&lt;Object&gt; 
 	 */
 	static public SimpleTask<Object>  audition(Mixer.Info mixerinfo, boolean canDoP, String path, long fromSamples, long samples, final ChangeListener<Number> theListener, TaskCallback callback ) {
 		try {
@@ -156,24 +194,25 @@ public abstract class DAC {
 
 	//-------------------------------------------------
 	//-- Instance variables
-	Decoder decoder;
+	protected Decoder decoder;
 	int blockSize = 4096; //default
 	 //--decorder's input side
 	int inputSampleFrequency;
 	long inputSampleCountTotal;
 	//-- decoder's output side
-	long outputSampleCount; //-- current sample count
-	long prevSampleCount;
-	long outputSampleCountEnd; //-- play until this sample count
+	protected long outputSampleCount; //-- current sample count
+	protected long prevSampleCount;
+	protected long outputSampleCountEnd; //-- play until this sample count
 	
-	PCMFormat pcmf;
-	Mixer.Info mixerinfo;
-	SourceDataLine dl;
+	protected DSDFormat<?> dsd;
+	protected PCMFormat pcmf;
+	protected Mixer.Info mixerinfo;
+	protected SourceDataLine dl;
 
 	private SimpleTask<Object> task;
 	//-- seek control
-	boolean background;
-	long sampleCountToSeek;
+	protected boolean background;
+	protected long sampleCountToSeek;
 
 
 	//-------------------------------------------------------
@@ -200,13 +239,14 @@ public abstract class DAC {
 	//-----------------------------------			
 
 	public DAC() {
-		this(null);
+		this(null, null);
 	}
 
-	public DAC(Mixer.Info mixerinfo) {
+	public DAC(Mixer.Info mixerinfo, DSDFormat<?> dsd) {
 		outputSampleCount = 0;
 		prevSampleCount = 0;
 		this.mixerinfo = mixerinfo;
+		this.dsd = dsd;
 		//
 		background = false;
 		sampleCountToSeek = -1L;
@@ -219,6 +259,13 @@ public abstract class DAC {
 		setOutputSampleCountEnd(toOutputSampleCount(inputSampleCountTotal));
 	}
 	
+	
+	public void close() {
+		if (dsd != null) {
+			dsd.close();
+			dsd = null;
+		}
+	}
 	//-------------------------------------------------------
 	//-- sample location
 	public void setOutputSampleCount(long outputSampleCount ) {
@@ -231,6 +278,7 @@ public abstract class DAC {
 	}
 	
 	protected void seekToOutputSampleCount(long outputSampleCount) {
+
 		long inputSampleCount = toInputSampleCount(outputSampleCount);
 		try {
 			decoder.seek(inputSampleCount);
@@ -249,7 +297,7 @@ public abstract class DAC {
 		}
 	}
 
-	protected long toOutputSampleCount(long inputSamples) {
+	public long toOutputSampleCount(long inputSamples) {
 		int outputSampleFrequency = getOutputSampleFrequency();
 		return (long)(inputSamples * (double)outputSampleFrequency/inputSampleFrequency);
 	}
@@ -327,8 +375,9 @@ public abstract class DAC {
 	
 	/**
 	 * 
-	 * @param theListener
-	 * @return
+	 * @param theListener ChangeListener&lt;Number&gt;
+	 * @param callback TaskCallback 
+	 * @return  SimpleTask&lt;Object&gt;
 	 */
 	public SimpleTask<Object> run(final ChangeListener<Number> theListener, TaskCallback callback) {
 		final int tickSamples = getOutputSampleFrequency()/10; //-- 1/10 sec
@@ -379,13 +428,11 @@ public abstract class DAC {
 }
 
 class DsdDAC extends DAC {
-	DSDFormat<?> dsd;
 	byte[] samples;
 	int nsampl;
 	
 	public DsdDAC(Mixer.Info mixerinfo, Decoder decoder, DSDFormat<?> dsd) {
-		super(mixerinfo);
-		this.dsd = dsd;
+		super(mixerinfo, dsd);
 
 		if (dsd instanceof DSFFormat || dsd instanceof WSDFormat)
 			blockSize = 4096; //-- see DFFFormat bloc
@@ -580,12 +627,20 @@ class PcmDAC extends DAC {
 	byte[] playBuffer;
 	//int testSeek;
 	int nsampl;
-
-	public PcmDAC(Mixer.Info mixerinfo, Decoder decoder) {
-		super(mixerinfo);
+	AudioFormat dlFormat;
+	
+	public PcmDAC(Mixer.Info mixerinfo, Decoder decoder, DSDFormat<?> dsd) {
+		super(mixerinfo, dsd);
 		setDecoder(decoder);
 		//this.decoder = decoder;
 		dl = getDataLine();
+	}
+	
+	public PcmDAC(SourceDataLine preferredLine, Decoder decoder, DSDFormat<?> dsd) {
+		super(null, dsd);
+		setDecoder(decoder);
+		dl = preferredLine;
+		dl = getDataLine(); //-- if preferredLine is null then real one is returned.
 	}
 	
 	@Override
@@ -593,15 +648,19 @@ class PcmDAC extends DAC {
 		//System.out.printf("Samples %d duration %ds%n",  decoder.getSampleCount(), decoder.getSampleCount()/decoder.getSampleRate());
 		pcmf = new PCMFormat();
 		pcmf.sampleRate = 44100 * 2 * 2;
-		pcmf.bitsPerSample = 16;
+		pcmf.bitsPerSample = 16; //-- See start also
 		//System.out.printf("clip: %x %x  %x-%x%n",((1 << pcmf.bitsPerSample) - 1) >> 1, 1 << pcmf.bitsPerSample, Short.MAX_VALUE, Short.MIN_VALUE); 
 		pcmf.channels = 2;
-		AudioFormat af = new AudioFormat(pcmf.sampleRate, pcmf.bitsPerSample, pcmf.channels, true, pcmf.lsb);
-		if (DEBUG) System.out.println(af);
+		dlFormat = new AudioFormat(pcmf.sampleRate, pcmf.bitsPerSample, pcmf.channels, true, pcmf.lsb);
+		if (DEBUG) System.out.println(dlFormat);
 		try {
-			pcmf.bitsPerSample = 24;
+			pcmf.bitsPerSample = 24; //-- Decoder will work for this value
 			decoder.setOutputFormat(pcmf);
-			return AudioSystem.getSourceDataLine(af, mixerinfo);
+			if (dl != null ) {
+				dl.open(dlFormat);
+				return dl;
+			}
+			return AudioSystem.getSourceDataLine(dlFormat, mixerinfo);
 		} catch (LineUnavailableException e) {
 			e.printStackTrace();
 		} catch (DecodeException e) {
@@ -615,9 +674,10 @@ class PcmDAC extends DAC {
 		this.background = background;
 		dl.open();
 		dl.start();
-		samples = new int[pcmf.channels][2048];
-		channels = (pcmf.channels > 2 ? 2 : pcmf.channels);
-		bytesChannelSample = 2; //pcmf.bitsPerSample / 8;
+		channels = dlFormat.getChannels();
+		samples = new int[channels][2048];
+		//channels = (pcmf.channels > 2 ? 2 : pcmf.channels);
+		bytesChannelSample = dlFormat.getSampleSizeInBits() / 8;
 		int bytesSample = channels * bytesChannelSample;
 		playBuffer = new byte[bytesSample * 2048];
 		//decoder.seek(0);
@@ -635,12 +695,13 @@ class PcmDAC extends DAC {
 			nsampl =  (int)(outputSampleCountEnd - outputSampleCount);
 		}
 		
+		int v;
 		for (int s = 0; s < nsampl; s++) {
 			for (int c = 0; c < channels; c++) {
 				//System.out.printf("%x", samples[c][s]);
-				samples[c][s] >>=8;
+				v = samples[c][s] >> 9; //-- 24bit full scale /2
 				for (int b = 0; b < bytesChannelSample; b++)
-					playBuffer[bp++] = (byte) ((samples[c][s] >> (b * 8)) & 255);
+					playBuffer[bp++] = (byte) ((v >> (b * 8)) & 255);
 			}
 		}
 		//for (int k=0;k<bp; k++)

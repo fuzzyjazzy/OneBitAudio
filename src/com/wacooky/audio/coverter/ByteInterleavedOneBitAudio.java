@@ -1,5 +1,10 @@
 package com.wacooky.audio.coverter;
 
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.IntFunction;
+import java.util.function.ObjIntConsumer;
+
 //-- Bitreverse table
 import org.justcodecs.dsd.Utils;
 
@@ -10,7 +15,31 @@ import org.justcodecs.dsd.Utils;
  * @author fujimori
  *
  */
-public class ByteInterleavedOneBitAudio {	
+public class ByteInterleavedOneBitAudio {
+	static public double[] bitToDouble( byte onebitByte) {
+		if (bitToDoubleTable == null) {
+			bitToDoubleTable = new double[256][8];
+			double[] array;
+			int v;
+			for (int i = 0; i < 256; i++) {
+				array = bitToDoubleTable[i];
+				v = i;
+				for( int j = 0; j < 8; j++) {
+					array[j] = ((v & 0x80) >0) ? 1.0 : -1.0;
+					v = v << 1;
+				}
+			}
+		}
+		int unsigned = onebitByte;
+		if (unsigned < 0)
+			unsigned = 127 - onebitByte;
+		
+		return bitToDoubleTable[unsigned]; 
+	}
+	
+	
+	static protected double[][] bitToDoubleTable = null;
+	
 	/**
 	 * deinterleave
 	 * 
@@ -102,5 +131,17 @@ public class ByteInterleavedOneBitAudio {
 
 	public void reverseBit() {
 		ByteInterleavedOneBitAudio.reverseBit(buffer);
+	}
+	
+	public void fill( ObjIntConsumer<byte[]> func) {
+		byte[] result = new byte[channels];
+		int samples = buffer.length/channels;
+		int idx;
+		for (int i = 0; i < samples; i++) {
+			func.accept(result, i);
+			idx = i*channels;
+			for (int ch = 0; ch < channels; ch++)
+				buffer[idx+ch] = result[ch];
+		}
 	}
 }

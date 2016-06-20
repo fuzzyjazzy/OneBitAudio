@@ -10,7 +10,7 @@ import java.nio.ByteOrder;
  * @author fujimori
  * @version 1.0		2016-05-30*
  */
-class WsdWriter extends OneBitAudioWriter {
+public class WsdWriter extends OneBitAudioWriter {
 	static final public int PREFERRED_FRAME_LENGTH = 4096;
 	byte[] bufo;
 	int bufoFrames;
@@ -34,7 +34,11 @@ class WsdWriter extends OneBitAudioWriter {
 	
 	@Override
 	public void createStereo(int samplingFrequency) throws IOException {
-		channels = 2;
+		create(samplingFrequency, 2);
+	}
+
+	public void create(int samplingFrequency, int channels) throws IOException {
+		this.channels = channels;
 		this.samplingFrequency = samplingFrequency;
 	
 		byte[] work = new byte[512];
@@ -80,7 +84,6 @@ class WsdWriter extends OneBitAudioWriter {
 		outputStream.write(work, 0, 512); //- User Specific
 		outputStream.write(work, 0, 160); //- Reserved
 		//-- Stream Data
-
 	}
 
 	@Override

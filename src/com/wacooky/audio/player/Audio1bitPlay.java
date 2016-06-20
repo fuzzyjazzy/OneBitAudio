@@ -79,8 +79,8 @@ public class Audio1bitPlay {
 
 	/**
 	 * Initialize controller
-	 * @param obj
-	 * @param stage
+	 * 
+	 * @param stage Stage
 	 */
 	public void initialize(Stage stage) {
 		//this.stage = stage;

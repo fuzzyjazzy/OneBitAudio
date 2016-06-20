@@ -32,9 +32,8 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Text;
 /**
- * 	Property: currentFileInfo
- *  Method: scanFiles(List<File> files, boolean append)
- *  
+ * Table of audio file informations such as sampling frequency etc.
+ *   
  * @author fujimori
  * @version 1.0
  */
@@ -172,16 +171,31 @@ public class AudioFileTableWidget extends HBox {
 
 	//---------------------------------------------------------
 	//-- Property
+	/**
+	 * Get selected file information.
+	 * 
+	 * @return	AudioFileInfo or null.
+	 */
 	public AudioFileInfo getCurrentFileInfo() {
 		return currentFileInfo.get();
 	}
-
+	/**
+	 * Get currentFileInof property.
+	 * 
+	 * @return ObjectProperty &gt; AudioFileInfo &lt;
+	 */
 	public ObjectProperty<AudioFileInfo> currentFileInfoProperty() {
 		return currentFileInfo;
 	}
 	//-- Property
 	//---------------------------------------------------------
 	
+	/**
+	 * Populate table.
+	 *  
+	 * @param files		List&lt;file&gt;
+	 * @param append	boolean
+	 */
 	public void scanFiles(List<File> files, boolean append) {
 		currentFileInfo.set(null);
 		//currentFileLabel.setText("");

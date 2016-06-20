@@ -14,18 +14,17 @@ import org.justcodecs.dsd.Decoder.DecodeException;
 
 import com.wacooky.audio.file.AudioFileFormat;
 import com.wacooky.audio.file.AudioFileFormatInfo;
-import com.wacooky.audio.file.FileFormat;
 import com.wacooky.audio.file.FileFormatDeterminant;
-import com.wacooky.audio.file.FileFormat.ReadProfile;
 
 /**
+ * /**
  * JustDSDFormat wraps DSDFileFormat class defined in JustDSD project to be
  * an AudioFileFormat in terms of FileFormatDeterminant provider.
  * See also JustDSDStream class.
- *  
+ *   *
  * @author fujimori
  *
- * @param <E>
+ * {@link JustDSDFormat}&lt; extends {@link DSDFormat}&lt;?&gt;&gt;
  */
 public abstract class JustDSDFormat<E extends DSDFormat<?>> extends AudioFileFormat {
 	protected Class<E> dsdFormatClazz;

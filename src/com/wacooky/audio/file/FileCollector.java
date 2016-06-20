@@ -19,7 +19,7 @@ import javafx.collections.ObservableList;
  * 
  * @author fujimori
  *
- * @param <E>
+ * {@link FileCollector}&lt;E extends {@link AudioFileInfo}&gt;
  */
 public class FileCollector<E extends AudioFileInfo> extends SimpleFileVisitor<Path> {
 	private ObservableList<E> record;
@@ -28,9 +28,9 @@ public class FileCollector<E extends AudioFileInfo> extends SimpleFileVisitor<Pa
 	private Set<E> set;
 	/**
 	 * 
-	 * @param fileInfoClass
-	 * @param record
-	 * @param determinant
+ 	 * @param fileInfoClass Class
+	 * @param record	ObservableList&lt;E&gt;
+	 * @param determinant FileFormatDeterminant
 	 */
 	public FileCollector(Class<?> fileInfoClass, ObservableList<E> record, FileFormatDeterminant determinant) {
 		this.determinants = new FileFormatDeterminant[1];

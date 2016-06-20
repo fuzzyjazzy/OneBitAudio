@@ -54,7 +54,7 @@ public class FileFormatDeterminant<T> {
 		this.extensions = extensions;
 	}
 
-	
+/*	
 	public boolean matchExtension(String path) {
 		if (extensions == null)
 			return true;
@@ -64,6 +64,25 @@ public class FileFormatDeterminant<T> {
 		String ext = path.substring(n-4);
 		for (int i = 0; i < extensions.length; i++ ) {
 			if ( ext.compareToIgnoreCase(extensions[i]) == 0 )
+				return true;
+		}
+		return false;
+	}
+*/
+	public boolean matchExtension(String path) {
+		if (extensions == null)
+			return true;
+
+		int extLen;
+		String ext;
+		int n;
+		for (String allowExt : extensions) {
+			extLen = allowExt.length();
+			n = path.length();
+			if (n < extLen)
+				continue;
+			ext = path.substring(n-extLen);
+			if ( ext.compareToIgnoreCase(allowExt) == 0 )
 				return true;
 		}
 		return false;

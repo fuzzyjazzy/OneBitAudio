@@ -5,15 +5,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.zip.DataFormatException;
 
-import com.wacooky.justdsdex.JustDSDReader;
-
 /**
  * Audio format converter.
  * 
  * Extract time region and map channels.
  * 
  * @author fujimori
- * @version 0.1	2016-05-30  WSD <--> DSF conversion is supporter.
+ * @version 0.1	2016-05-30  conversion between WSD and DSFis supported.
  */
 public class FormatConverter implements InteractiveProcess {
 	static public boolean DEBUG = true;
@@ -196,15 +194,15 @@ public class FormatConverter implements InteractiveProcess {
 	//---------------------------------------------------------------
 	
 	/**
-	 * fron CUI
+	 * for CUI
 	 * 
-	 * @param src
-	 * @param dst
-	 * @param fromSec	null or start sec
-	 * @param toSec		null or end sec
-	 * @throws FileNotFoundException
-	 * @throws DataFormatException
-	 * @throws IOException
+	 * @param src	source File
+	 * @param dst	destination File
+	 * @param fromSec	null or start second
+	 * @param toSec		null or end second
+	 * @throws FileNotFoundException src file not found.
+	 * @throws DataFormatException src file is not an audion file.
+	 * @throws IOException	io error in accessin src or dst file.
 	 */
 	public void convert( File src , File dst, Double fromSec, Double toSec  ) throws FileNotFoundException, DataFormatException, IOException {
 		initializeFileIO( src, dst );

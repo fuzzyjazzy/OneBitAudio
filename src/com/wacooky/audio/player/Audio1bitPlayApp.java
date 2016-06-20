@@ -1,7 +1,5 @@
 package com.wacooky.audio.player;
 	
-import com.wacooky.audio.player.Version;
-
 import javafx.application.Application;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
