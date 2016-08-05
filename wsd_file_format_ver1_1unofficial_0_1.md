@@ -18,31 +18,31 @@ ANY EXPRESSED OR IMPLIED WARRANTIES ARE DISCLAIMED. IN NO EVENT SHALL THE ONE-BI
 
 This specification defines file format to store a 1-bit coded data stream, which must be treated as a whole , into a storage media. The type of 1-bit coded data stream should be audio (music or tune) but future specification may extend use case of 1-bit coded data to other kind.
 
-## 1.1 Overview
+### 1.1 Overview
 
 WSD format defines four data areas, shown in following clauses, in a logial storage unit or a file. Name of the file shall have an extenstion "wsd", for instance "xxxxxx.wsd". Every single WSD format file should contain one title of music.
-### <1st area> General Information
-This data area provides version information of this specification.### <2nd area> Data Specifications Information
+#### <1st area> General Information
+This data area provides version information of this specification.#### <2nd area> Data Specifications Information
 This data area provides information of the 1-bit coded data, here after 'Stream Data', stored in the 4th data area. Playback systems shall read this information to determine method of data reproduction.
 
 Informative: Any packetization or framing methods which may have header, are out of scope of this specification.
-### <3rd area> Text Data
-This data area provides textual information of the title, recorded day, location measured by GPS and so on.### <4th area> Stream Data
+#### <3rd area> Text Data
+This data area provides textual information of the title, recorded day, location measured by GPS and so on.#### <4th area> Stream Data
 This data area contains 1-bit coded data for a single music. It shall contain no audio gap.
 
-## 1.2 Future extensions and version control
+### 1.2 Future extensions and version control
 
 The version of this specification is 1.1.
 In this specification the Stream Data shall be a music.
 
 This specificatoin defines two kinds of reserved field for future extention.
-### (1) Reserved<sup>*1</sup>The reserved field specified by Reserved<sup>*1</sup> shall be used for the purposes defined in Tabal-1.
-### (2) Reserved<sup>*2</sup>The reserved field specified by Reserved<sup>*2</sup> shall be used for textual information. These fields shall be filled up with '20h'.
-### (3) Other extensions 
+#### (1) Reserved<sup>*1</sup>The reserved field specified by Reserved<sup>*1</sup> shall be used for the purposes defined in Tabal-1.
+#### (2) Reserved<sup>*2</sup>The reserved field specified by Reserved<sup>*2</sup> shall be used for textual information. These fields shall be filled up with '20h'.
+#### (3) Other extensions 
 In addition to these reserved fields, expansion of data areas is possible by changing pointer value such as Text_SP and Data_SP. In this case specification version shall be 2.0 or greater;
 
 
-## 2. Specification
+### 2. Specification
 
 This specification uses number notation as follows:
 
@@ -200,7 +200,7 @@ Data is stored in big-endian byte order.### 2.1 File structureFile structure
 
 </table>
 
-### 2.2 Area for the General Information and Data Spec. InformationAll bits of the field in Table-1 denoted by Reserved<sup>*1</sup> shall be '0b'.
+### 2.2 General Information areaAll bits of the field in Table-1 denoted by Reserved<sup>*1</sup> shall be '0b'.
  #### <RBP 0 to 3> File_ID"1bit" by using ASCII character set.
 #### <RBP 8> Version_NTwo-digit version number is stored in BCD(Binary-coded Decimal). For example,
 
@@ -216,6 +216,8 @@ If the file size does not exceed 4GB
 This field shall be '00000080h' for all specifications version 1.X (X=0,1,2...9).
 #### <RBP 24 to 27> Data_SPRelative byte position (RBP) to the Stream Data area.
 This field shall be '00000800h' for all specifications version 1.X (X=0,1,2...9).
+
+### 2.3 Data Specific Information area
 
 #### <RBP 32 to 35> PB_TM
 Duration time of the Stream Data stored in BCD format.
@@ -331,7 +333,7 @@ For example, 18.1ch circle location.
 </tr></table>
 ### <RBP 64 to 67> EmphNo emphasis: '00000000h’.
 #### <RBP 72 to 87> Time ReferenceRecording start time expressed in number of samples.
-### 2.3 Text Data areaIn this Text Data area a set of ASCII characters specified in following table shall be used.
+### 2.4 Text Data areaIn this Text Data area a set of ASCII characters specified in following table shall be used.
 
 |||
 |:--|:--||alphabet|'A'&ndash;'Z', 'a'&ndash;'z'||space |'&nbsp;' (20h)||digit|'0'&ndash;'9'||symol|'!', '"', '#', '$', '%', '&', ''', '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '&lt;', '=', '&gt;', '?', '@', '[', '\', ']', '^','_', '`', '{', '&verbar;', '}', '~'|
@@ -368,7 +370,7 @@ User defined textual data or empty.
 Reserved for textual data. This reserved field denoted by Reserved<sup>*2</sup> shall be filled up eith space character '20h'. Future specofocations (Ver.2.0 or later) may define another textual data area after this  
 field.
 
-### 2.3 Stream Data エリアEach channel 1-bit coded data (audio sample data) is aligned in a byte from MSB to LSB. And channel sequences of 8-bit aligned unit are interleaved to form the Stream Data.  
+### 2.5 Stream Data areaEach channel 1-bit coded data (audio sample data) is aligned in a byte from MSB to LSB. And channel sequences of 8-bit aligned unit are interleaved to form the Stream Data.  
 
 One cycle of channel-interleave consists of channels specified in Ch_Asn. The order of channel assignmnt look up is from MSB of RBP48 to LSB pf RBP51.
 
